@@ -11,7 +11,7 @@ class ConversationAgent:
         self.conversation_history = [
                 {
                     "role": "system",
-                    "content": read_file(file_path="./context.txt")
+                    "content": self.read_file(file_path="./context.txt")
                 }
             ]
 

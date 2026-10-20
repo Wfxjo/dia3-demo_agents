@@ -1,10 +1,14 @@
+import base64
+
 import streamlit
 from llm_agent import ConversationAgent
 
 
 class ChatApp:
     WHISPER_MODEL = "whisper-large-v3"
-    FILE_TYPES = ["txt", "md", "py", "csv"]
+    VISION_MODEL = "qwen/qwen3.8-27b"
+    VISION_PROMPT = "Décris cette image en détail et recopie tout le texte visible."
+    FILE_TYPES = ["txt", "md", "py", "csv", "png", "jpg", "jpeg", "webp"]
 
 
     def __init__(self):
@@ -28,7 +32,27 @@ class ChatApp:
         )
 
 
+    def describe_image(self, image_file):
+        encoded_image = base64.b64encode(image_file.read()).decode("utf-8")
+        image_url = "data:" + image_file.type + ";base64," + encoded_image
+
+        return self.agent.groq_client.chat.completions.create(
+            model=self.VISION_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": self.VISION_PROMPT},
+                        {"type": "image_url", "image_url": {"url": image_url}},
+                    ],
+                }
+            ],
+        ).choices[0].message.content
+
+
     def read_file(self, uploaded_file):
+        if uploaded_file.type.startswith("image/"):
+            return self.describe_image(uploaded_file)
         return uploaded_file.read().decode("utf-8")
 
 

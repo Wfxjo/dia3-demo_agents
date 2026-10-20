@@ -1,72 +1,56 @@
-import streamlit as st
+import streamlit
 from llm_agent import ConversationAgent
 
 
 class ChatApp:
-    WHISPER_MODEL = "whisper-large-v3-turbo"
-    ALLOWED_FILE_TYPES = ["txt", "md", "py", "csv"]
+    WHISPER_MODEL = "whisper-large-v3"
 
 
     def __init__(self):
-        st.set_page_config(page_title="Jarvis")
-        st.title("Barbe-Quasar")
+        streamlit.set_page_config(page_title="Jarvis")
+        streamlit.title("Barbe-Quasar")
 
-        if "agent" not in st.session_state:
-            st.session_state.agent = ConversationAgent()
+        if "agent" not in streamlit.session_state:
+            streamlit.session_state.agent = ConversationAgent()
 
-        self.agent = st.session_state.agent
+        self.agent = streamlit.session_state.agent
 
 
     def transcribe_audio(self, audio_file):
         return self.agent.groq_client.audio.transcriptions.create(
             file=("audio.wav", audio_file.read()),
             model=self.WHISPER_MODEL,
+            temperature=0,
             response_format="text",
         )
 
 
-    def read_uploaded_file(self, uploaded_file):
-        return uploaded_file.read().decode("utf-8")
-
-
-    def combine_inputs_into_text(self, user_input):
-        question_parts = []
-
-        if user_input_text:
-            question_parts.append(user_input_text)
-
+    def build_question(self, user_input):
         if user_input.audio:
-            try:
-                question_parts.append(self.transcribe_audio(user_input.audio))
-            except Exception as error:
-                st.error(f"Erreur de transcription : {error}")
-
-        for uploaded_file in user_input.files:
-            try:
-                file_content = self.read_uploaded_file(uploaded_file)
-                question_parts.append(
-                    f"Contenu du fichier {uploaded_file.name} :\n"
-                    f"{file_content}"
-                )
-            except Exception as error:
-                st.error(f"Erreur de lecture du fichier : {error}")
-
-        return "\n\n".join(question_parts)
+            return self.transcribe_audio(user_input.audio)
+        return user_input.text
 
 
     def display_messages(self):
         for message in self.agent.conversation_history[1:]:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+            with streamlit.chat_message(message["role"]):
+                streamlit.markdown(message["content"])
 
 
     def run(self):
-        user_input = st.chat_input(
+        user_input = streamlit.chat_input(
             "Que veux tu moussaillon ?",
-            accept_file=True,
-            file_type=self.ALLOWED_FILE_TYPES,
+            accept_file=False,
             accept_audio=True,
         )
 
         if user_input:
             question = self.build_question(user_input)
+
+            if question:
+                self.agent.ask_llm(question)
+
+        self.display_messages()
+
+
+ChatApp().run()
